@@ -1,0 +1,251 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f544b59b-a0af-4a5c-9449-66c12c86b406",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 15,
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "9b368c54-d5dd-4ef3-9199-62a802b864ad",
+      "name": "Get many messages",
+      "webhookId": "9b6e468d-fd2e-40b1-ab58-7f83108be8af",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UdHc8FPW0UqgIdjW",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{$json.id}}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "2e7028be-21d7-4106-b011-66189ace534f",
+      "name": "Get a message",
+      "webhookId": "210846b2-31a1-4e3d-8182-c8f8022a74ab",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UdHc8FPW0UqgIdjW",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function decodeBase64(data) {\n  return Buffer.from(data, 'base64').toString('utf-8');\n}\n\nreturn items.map(item => {\n  let body = \"\";\n\n  const payload = item.json.payload;\n\n  if (payload && payload.parts) {\n    for (const part of payload.parts) {\n      if (part.mimeType === \"text/plain\" && part.body?.data) {\n        body = decodeBase64(part.body.data);\n        break;\n      }\n    }\n  }\n\n  return {\n    json: {\n      subject: item.json.Subject,\n      from: item.json.From,\n      body: body || item.json.snippet\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "40e1f1ad-2527-4527-97b0-1978bf25f638",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  model: \"tinyllama\",\n  prompt: `Summarize this email in 2 lines only:\\n\\n${$json.body}`,\n  stream: false\n} }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        832,
+        0
+      ],
+      "id": "fa5f250c-b014-4ca8-8e49-6d3810ac85ef",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const text = item.json.response || \"\";\n\n  // Extract subject\n  const subjectMatch = text.match(/Subject:\\s*(.*)/);\n  const subject = subjectMatch ? subjectMatch[1].split('\\n')[0] : \"\";\n\n  // Clean summary (remove Subject/From lines)\n  const summary = text\n    .replace(/Subject:.*\\n?/g, \"\")\n    .replace(/From:.*\\n?/g, \"\")\n    .replace(/Content:*/g, \"\")\n    .trim();\n\n  return {\n    json: {\n      subject,\n      summary\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "9eba2eb7-ced6-4c97-ab36-ae1aa872e1fc",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "=https://docs.google.com/spreadsheets/d/1JAHxoQX_1kCztcGS6ZIaJiF0Lzk5JER2U8g4aWFq3Zs/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JAHxoQX_1kCztcGS6ZIaJiF0Lzk5JER2U8g4aWFq3Zs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1264,
+        -16
+      ],
+      "id": "019873f9-8f9c-48ec-bbf1-3e976b938963",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0OaQlw3UotSxwcVz",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0d054c19-5c89-4129-93d6-4a1143577776",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1fd791cf17dc5adf78895780337e18027b49633f2f8f191cfe32d2dc811fea68"
+  },
+  "id": "CCf7xco53rJEIMxh",
+  "tags": []
+}
