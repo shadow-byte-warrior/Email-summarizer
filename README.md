@@ -17,24 +17,7 @@ This workflow automates **email extraction, summarization using a local LLM, and
 ## ⚙️ Workflow Architecture
 
 <img width="1657" height="751" alt="Screenshot 2026-04-03 152207" src="https://github.com/user-attachments/assets/52b19f40-751e-4021-964a-7b6d4d336949" />
-```id="flow1
-"
-Manual Trigger
-   ↓
-Gmail → Get Messages
-   ↓
-Gmail → Get Full Message
-   ↓
-Code → Extract Email Body
-   ↓
-HTTP Request → Local LLM (TinyLlama)
-   ↓
-Code → Clean Summary
-   ↓
-Google Sheets → Append Row
-```
 
----
 
 ## 🧠 AI Model Used
 
